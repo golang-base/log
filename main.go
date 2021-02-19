@@ -1,12 +1,16 @@
-package main
+package logger
 
 func main() {
 	config := Config{
-		Development: false,
+		Development: true,
 		OutputDir:   "./log/",
 	}
 	Init(&config)
 
-	log.Info("test info")
-	log.Error("test error")
+	log.Sugar().Debug("aafefef", 2323, "abddee")
+	log.Sugar().Error("2323", "aabd", "abc")
+	//Info("test info")
+	//Error("test error")
+	//Info("abcddddddd", zap.String("abc", "aaaaaaaaa"))
+	//Error("234533error", zap.Int("abc", 333))
 }
