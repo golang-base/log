@@ -10,7 +10,7 @@ import (
 var log *zap.Logger
 
 func Init(config *Config) {
-	infoCore := genCore(config, "info.log", zapcore.DebugLevel, config.OutputConsole)
+	infoCore := genCore(config, "info.log", zapcore.DebugLevel, config.Development)
 	errCore := genCore(config, "error.log", zapcore.ErrorLevel, false)
 
 	log = zap.New(zapcore.NewTee(infoCore, errCore), zap.AddCaller()) //zap.AddCaller()为显示文件名和行号，可省略
@@ -46,7 +46,7 @@ func genCore(config *Config, fileName string, level zapcore.Level, outputConsole
 		Compress:   false,                     //是否压缩处理
 	}
 	var writeSyncer zapcore.WriteSyncer
-	if outputConsole && config.Development { //  加入console输出
+	if outputConsole { //  加入console输出
 		writeSyncer = zapcore.NewMultiWriteSyncer(zapcore.AddSync(&fileConfig), zapcore.AddSync(os.Stdout))
 	} else { //，直接打印文件
 		writeSyncer = zapcore.AddSync(&fileConfig)
