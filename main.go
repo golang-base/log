@@ -3,7 +3,7 @@ package logger
 func main() {
 	config := Config{
 		Development: true,
-		OutputDir:   "./log/",
+		FileDir:     "./log/",
 	}
 	Init(&config)
 

@@ -10,19 +10,18 @@ import (
 var log *zap.Logger
 
 func Init(config *Config) {
-	debugCore := genCore(config, "debug.log", zapcore.DebugLevel)
-	infoCore := genCore(config, "info.log", zapcore.InfoLevel)
-	errCore := genCore(config, "error.log", zapcore.ErrorLevel)
+	infoCore := genCore(config, "info.log", zapcore.DebugLevel, config.OutputConsole)
+	errCore := genCore(config, "error.log", zapcore.ErrorLevel, false)
 
-	log = zap.New(zapcore.NewTee(debugCore, infoCore, errCore), zap.AddCaller()) //zap.AddCaller()为显示文件名和行号，可省略
+	log = zap.New(zapcore.NewTee(infoCore, errCore), zap.AddCaller()) //zap.AddCaller()为显示文件名和行号，可省略
 }
 
-func genCore(config *Config, fileName string, level zapcore.Level) zapcore.Core {
+func genCore(config *Config, fileName string, level zapcore.Level, outputConsole bool) zapcore.Core {
 	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:       "time",
-		LevelKey:      "level",
-		NameKey:       "logger",
-		CallerKey:     "linenum",
+		TimeKey:  "time",
+		LevelKey: "level",
+		NameKey:  "logger",
+		//CallerKey:     "linenum",
 		MessageKey:    "msg",
 		StacktraceKey: "stacktrace",
 
@@ -33,31 +32,29 @@ func genCore(config *Config, fileName string, level zapcore.Level) zapcore.Core 
 		EncodeCaller:   zapcore.ShortCallerEncoder,     // 触发行号，短
 		EncodeName:     zapcore.FullNameEncoder,
 	}
+	if level == zap.ErrorLevel {
+		encoderConfig.CallerKey = "linenum"
+	}
 	//	encoder = zapcore.NewJSONEncoder(encoderConfig)
 	encoder := zapcore.NewConsoleEncoder(encoderConfig)
 
 	fileConfig := lumberjack.Logger{
-		Filename:   config.OutputDir + fileName, //日志文件存放目录
-		MaxSize:    5,                           //文件大小限制,单位MB
-		MaxBackups: 5,                           //最大保留日志文件数量
-		MaxAge:     30,                          //日志文件保留天数
-		Compress:   false,                       //是否压缩处理
+		Filename:   config.FileDir + fileName, //日志文件存放目录
+		MaxSize:    5,                         //文件大小限制,单位MB
+		MaxBackups: 5,                         //最大保留日志文件数量
+		MaxAge:     30,                        //日志文件保留天数
+		Compress:   false,                     //是否压缩处理
 	}
 	var writeSyncer zapcore.WriteSyncer
-	if config.Development { // 开发模式 加入console输出
+	if outputConsole && config.Development { //  加入console输出
 		writeSyncer = zapcore.NewMultiWriteSyncer(zapcore.AddSync(&fileConfig), zapcore.AddSync(os.Stdout))
-	} else { // 生产模式，直接打印文件
+	} else { //，直接打印文件
 		writeSyncer = zapcore.AddSync(&fileConfig)
 	}
 
-	var levelEnabler zapcore.LevelEnabler
-	if level == zapcore.DebugLevel {
-		levelEnabler = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-	} else {
-		levelEnabler = zap.LevelEnablerFunc(func(lev zapcore.Level) bool { //error级别
-			return lev >= level
-		})
-	}
+	levelEnabler := zap.LevelEnablerFunc(func(lev zapcore.Level) bool { //error级别
+		return lev >= level
+	})
 
 	return zapcore.NewCore(encoder, writeSyncer, levelEnabler) //第三个及之后的参数为写入文件的日志级别,ErrorLevel模式只记录error级别的日志
 }
